@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🤖 LLM Battle Tracker 2026 — 实时开源 vs 闭源大模型对决榜</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0d0d14; color: #e8e8f0; font-family: -apple-system, 'Segoe UI', sans-serif; min-height: 100vh; }
+  header { background: linear-gradient(135deg, #1a0a2e 0%, #0d1a2e 100%); padding: 24px; border-bottom: 1px solid #2a2a4a; }
+  header h1 { font-size: 1.8rem; font-weight: 700; }
+  header h1 span { background: linear-gradient(90deg, #7c3aed, #2563eb, #06b6d4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  header p { color: #888; margin-top: 6px; font-size: 0.9rem; }
+  .badge { display: inline-block; background: #1a3a2a; color: #34d399; border: 1px solid #34d399; border-radius: 12px; padding: 2px 10px; font-size: 0.75rem; margin-left: 10px; vertical-align: middle; }
+  .container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+  .section-title { font-size: 1.1rem; font-weight: 600; color: #a78bfa; margin: 28px 0 14px; display: flex; align-items: center; gap: 8px; }
+  .section-title::after { content: ''; flex: 1; height: 1px; background: #2a2a4a; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+  .card { background: #13131f; border: 1px solid #2a2a4a; border-radius: 12px; padding: 18px; transition: border-color 0.2s, transform 0.2s; cursor: pointer; }
+  .card:hover { border-color: #7c3aed; transform: translateY(-2px); }
+  .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+  .card-name { font-size: 1.1rem; font-weight: 700; }
+  .card-org { font-size: 0.75rem; color: #888; margin-top: 2px; }
+  .score { background: #1a0a3a; border: 1px solid #7c3aed; border-radius: 8px; padding: 4px 10px; text-align: center; }
+  .score-num { font-size: 1.4rem; font-weight: 800; color: #a78bfa; }
+  .score-label { font-size: 0.65rem; color: #888; }
+  .badges { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+  .tag { border-radius: 6px; padding: 3px 8px; font-size: 0.72rem; font-weight: 600; }
+  .tag-open { background: #0a2a1a; color: #34d399; border: 1px solid #34d399; }
+  .tag-closed { background: #2a0a0a; color: #f87171; border: 1px solid #f87171; }
+  .tag-china { background: #1a1a0a; color: #fbbf24; border: 1px solid #fbbf24; }
+  .tag-agent { background: #0a1a2a; color: #60a5fa; border: 1px solid #60a5fa; }
+  .bench-row { display: flex; justify-content: space-between; align-items: center; margin: 5px 0; font-size: 0.82rem; }
+  .bench-name { color: #888; }
+  .bench-val { font-weight: 700; color: #e8e8f0; }
+  .bench-bar { width: 100%; background: #1a1a2a; border-radius: 4px; height: 4px; margin-top: 2px; overflow: hidden; }
+  .bench-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #7c3aed, #2563eb); }
+  .table-wrap { overflow-x: auto; margin-top: 14px; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  th { background: #1a1a2a; color: #a78bfa; padding: 10px 14px; text-align: left; font-weight: 600; border-bottom: 2px solid #2a2a4a; }
+  td { padding: 10px 14px; border-bottom: 1px solid #1e1e2e; }
+  tr:hover td { background: #16161f; }
+  .rank-1 td:first-child { color: #fbbf24; font-weight: 700; }
+  .rank-2 td:first-child { color: #94a3b8; font-weight: 600; }
+  .rank-3 td:first-child { color: #a07850; font-weight: 600; }
+  .updated { color: #555; font-size: 0.78rem; margin-top: 20px; text-align: center; }
+  .ticker-bar { background: #0d0d14; border-top: 1px solid #2a2a4a; border-bottom: 1px solid #2a2a4a; padding: 8px 0; overflow: hidden; position: relative; }
+  .ticker-inner { display: flex; gap: 32px; animation: scroll-x 30s linear infinite; white-space: nowrap; }
+  @keyframes scroll-x { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+  .ticker-item { font-size: 0.82rem; color: #aaa; }
+  .ticker-item span { font-weight: 700; }
+  .up { color: #34d399; }
+  .down { color: #f87171; }
+  .winner-banner { background: linear-gradient(135deg, #1a0a2e, #0d1a2e); border: 1px solid #7c3aed; border-radius: 12px; padding: 18px; margin-bottom: 20px; display: flex; gap: 16px; align-items: center; }
+  .winner-banner .trophy { font-size: 2.5rem; }
+  .winner-banner h3 { font-size: 1rem; color: #a78bfa; }
+  .winner-banner p { font-size: 0.85rem; color: #ccc; margin-top: 4px; }
+  .filter-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+  .filter-btn { background: #1a1a2a; border: 1px solid #2a2a4a; color: #888; border-radius: 8px; padding: 6px 14px; font-size: 0.82rem; cursor: pointer; transition: all 0.2s; }
+  .filter-btn.active, .filter-btn:hover { background: #2a1a4a; border-color: #7c3aed; color: #a78bfa; }
+</style>
+</head>
+<body>
+
+<div class="ticker-bar">
+  <div class="ticker-inner" id="ticker">
+    <span class="ticker-item">🤖 <span>BTC</span> $76,635 <span class="up">▲1.64%</span></span>
+    <span class="ticker-item">🤖 <span>ETH</span> $2,116 <span class="up">▲2.55%</span></span>
+    <span class="ticker-item">🤖 <span>SOL</span> $85.69 <span class="up">▲1.75%</span></span>
+    <span class="ticker-item">📊 <span>NVDA</span> Post-Q1FY27: $81.6B Rev, EPS $1.87</span>
+    <span class="ticker-item">🧬 <span>Enhertu</span> FDA Dual HER2 Approval | May 2026</span>
+    <span class="ticker-item">🔥 Kimi K2.6 — #1 Open-Source on Artificial Analysis Index</span>
+    <span class="ticker-item">⚡ DeepSeek V4 — 1.6T params, MIT license, LiveCodeBench 93.5%</span>
+    <span class="ticker-item">🤖 <span>BTC</span> $76,635 <span class="up">▲1.64%</span></span>
+    <span class="ticker-item">🤖 <span>ETH</span> $2,116 <span class="up">▲2.55%</span></span>
+    <span class="ticker-item">🤖 <span>SOL</span> $85.69 <span class="up">▲1.75%</span></span>
+    <span class="ticker-item">📊 <span>NVDA</span> Post-Q1FY27: $81.6B Rev, EPS $1.87</span>
+    <span class="ticker-item">🧬 <span>Enhertu</span> FDA Dual HER2 Approval | May 2026</span>
+    <span class="ticker-item">🔥 Kimi K2.6 — #1 Open-Source on Artificial Analysis Index</span>
+    <span class="ticker-item">⚡ DeepSeek V4 — 1.6T params, MIT license, LiveCodeBench 93.5%</span>
+  </div>
+</div>
+
+<header>
+  <h1>🤖 <span>LLM Battle Tracker 2026</span> <span class="badge">LIVE</span></h1>
+  <p>开源 vs 闭源 — 2026年大模型实力全景。数据来源：Artificial Analysis Index、官方Benchmark。</p>
+</header>
+
+<div class="container">
+
+  <div class="winner-banner">
+    <div class="trophy">🏆</div>
+    <div>
+      <h3>本周开源冠军：Kimi K2.6 (Moonshot AI)</h3>
+      <p>Artificial Analysis Intelligence Index 开源权重模型排名 #1，综合得分 54，原生支持 300 子Agent并发编排。总排名 #4，仅次于 Anthropic、Google、OpenAI 的闭源旗舰。</p>
+    </div>
+  </div>
+
+  <div class="section-title">🔥 旗舰模型对决</div>
+  
+  <div class="filter-bar">
+    <button class="filter-btn active" onclick="filterCards('all')">全部</button>
+    <button class="filter-btn" onclick="filterCards('open')">开源</button>
+    <button class="filter-btn" onclick="filterCards('closed')">闭源</button>
+    <button class="filter-btn" onclick="filterCards('agent')">Agent优化</button>
+    <button class="filter-btn" onclick="filterCards('china')">中国出品</button>
+  </div>
+
+  <div class="grid" id="model-grid">
+    
+    <!-- Claude Opus 4.7 -->
+    <div class="card" data-tags="closed agent">
+      <div class="card-header">
+        <div>
+          <div class="card-name">Claude Opus 4.7</div>
+          <div class="card-org">Anthropic · Apr 16, 2026</div>
+        </div>
+        <div class="score"><div class="score-num">91</div><div class="score-label">AA Index</div></div>
+      </div>
+      <div class="badges">
+        <span class="tag tag-closed">闭源</span>
+        <span class="tag tag-agent">Agent</span>
+      </div>
+      <div class="bench-row"><span class="bench-name">SWE-Bench Pro</span><span class="bench-val">87.6%</span></div>
+      <div class="bench-bar"><div class="bench-fill" style="width:87.6%"></div></div>
+      <div class="bench-row"><span class="bench-name">GPQA Diamond</span><span class="bench-val">91.2%</span></div>
+      <div class="bench-bar"><div class="bench-fill" style="width:91.2%"></div></div>
+      <div class="bench-row"><span class="bench-name">Context</span><span class="bench-val">1M tokens</span></div>
+      <p style="font-size:0.8rem;color:#888;margin-top:10px;">首个支持百万级上下文的 Opus；SWE-Bench 霸榜，Agent自主性大幅跃升</p>
+    </div>
+
+    <!-- GPT-5.5 -->
+    <div class="card" data-tags="closed agent">
+      <div class="card-header">
+        <div>
+          <div class="card-name">GPT-5.5</div>
+          <div class="card-org">OpenAI · Apr 23, 2026</div>
+        </div>
+        <div class="score"><div class="score-num">89</div><div class="score-label">AA Index</div></div>
+      </div>
+      <div class="badges">
+        <span class="tag tag-closed">闭源</span>
+        <span class="tag tag-agent">Agent</span>
+      </div>
+      <div class="bench-row"><span class="bench-name">SWE-Bench Pro</span><span class="bench-val">85.1%</span></div>
+      <div class="bench-bar"><div class="bench-fill" style="width:85.1%"></div></div>
+      <div class="bench-row"><span class="bench-name">Agent 3层推理</span><span class="bench-val">✅</span></div>
+      <div class="bench-row"><span class="bench-name">Context</span><span class="bench-val">256K tokens</span></div>
+      <p style="font-size:0.8rem;color:#888;margin-top:10px;">OpenAI 7天后跟进，三层推理架构，实际工作场景性能强；Claude发布后20分钟内跟进的传统再演</p>
+    </div>
+
+    <!-- Kimi K2.6 -->
+    <div class="card" data-tags="open agent china">
+      <div class="card-header">
+        <div>
+          <div class="card-name">Kimi K2.6</div>
+          <div class="card-org">Moonshot AI · May 2026</div>
+        </div>
+        <div class="score"><div class="score-num">54</div><div class="score-label">开源#1</div></div>
+      </div>
+      <div class="badges">
+        <span class="tag tag-open">开源</span>
+        <span class="tag tag-agent">Agent</span>
+        <span class="tag tag-china">中国</span>
+      </div>
+      <div class="bench-row"><span class="bench-name">开源综合排名</span><span class="bench-val">#1</span></div>
+      <div class="bench-bar"><div class="bench-fill" style="width:96%"></div></div>
+      <div class="bench-row"><span class="bench-name">全球总排名</span><span class="bench-val">#4</span></div>
+      <div class="bench-row"><span class="bench-name">子Agent并发</span><span class="bench-val">300个</span></div>
+      <p style="font-size:0.8rem;color:#888;margin-top:10px;">原生300子Agent并发；美团$20B战略投资；开源生态Agent编排天花板</p>
+    </div>
+
+    <!-- DeepSeek V4 -->
+    <div class="card" data-tags="open china">
+      <div class="card-header">
+        <div>
+          <div class="card-name">DeepSeek V4-Pro</div>
+          <div class="card-org">DeepSeek · 2026 Q1</div>
+        </div>
+        <div class="score"><div class="score-num">MIT</div><div class="score-label">License</div></div>
+      </div>
+      <div class="badges">
+        <span class="tag tag-open">开源</span>
+        <span class="tag tag-china">中国</span>
+      </div>
+      <div class="bench-row"><span class="bench-name">LiveCodeBench</span><span class="bench-val">93.5%</span></div>
+      <div class="bench-bar"><div class="bench-fill" style="width:93.5%"></div></div>
+      <div class="bench-row"><span class="bench-name">参数量</span><span class="bench-val">1.6T</span></div>
+      <div class="bench-row"><span class="bench-name">License</span><span class="bench-val">MIT ✅</span></div>
+      <p style="font-size:0.8rem;color:#888;margin-top:10px;">1.6万亿参数+MIT协议开源新纪录；代码能力LiveCodeBench 93.5%，开源最强代码模型</p>
+    </div>
+
+    <!-- Qwen 3.5 -->
+    <div class="card" data-tags="open china">
+      <div class="card-header">
+        <div>
+          <div class="card-name">Qwen 3.5-397B</div>
+          <div class="card-org">Alibaba · 2026</div>
+        </div>
+        <div class="score"><div class="score-num">88.4</div><div class="score-label">GPQA%</div></div>
+      </div>
+      <div class="badges">
+        <span class="tag tag-open">开源</span>
+        <span class="tag tag-china">中国</span>
+      </div>
+      <div class="bench-row"><span class="bench-name">GPQA Diamond</span><span class="bench-val">88.4%</span></div>
+      <div class="bench-bar"><div class="bench-fill" style="width:88.4%"></div></div>
+      <div class="bench-row"><span class="bench-name">架构</span><span class="bench-val">GDN混合MoE</span></div>
+      <div class="bench-row"><span class="bench-name">Tool Calling</span><span class="bench-val">榜单#1</span></div>
+      <p style="font-size:0.8rem;color:#888;margin-top:10px;">学术推理GPQA Diamond冠军；工具调用榜第一，企业级Agent接入首选</p>
+    </div>
+
+    <!-- Gemini 3.1 Pro -->
+    <div class="card" data-tags="closed">
+      <div class="card-header">
+        <div>
+          <div class="card-name">Gemini 3.1 Pro</div>
+          <div class="card-org">Google · Apr 2026</div>
+        </div>
+        <div class="score"><div class="score-num">88</div><div class="score-label">AA Index</div></div>
+      </div>
+      <div class="badges">
+        <span class="tag tag-closed">闭源</span>
+      </div>
+      <div class="bench-row"><span class="bench-name">多模态</span><span class="bench-val">视频+音频</span></div>
+      <div class="bench-row"><span class="bench-name">Antigravity 2.0</span><span class="bench-val">独立桌面</span></div>
+      <div class="bench-row"><span class="bench-name">Context</span><span class="bench-val">2M tokens</span></div>
+      <p style="font-size:0.8rem;color:#888;margin-top:10px;">Google I/O 2026 旗舰；Antigravity 2.0 独立桌面Agent；2M上下文窗口全球最大</p>
+    </div>
+
+    <!-- GLM 5.1 -->
+    <div class="card" data-tags="open china agent">
+      <div class="card-header">
+        <div>
+          <div class="card-name">GLM 5.1</div>
+          <div class="card-org">Zhipu AI · 2026</div>
+        </div>
+        <div class="score"><div class="score-num">#1</div><div class="score-label">SWE MIT</div></div>
+      </div>
+      <div class="badges">
+        <span class="tag tag-open">开源 MIT</span>
+        <span class="tag tag-china">中国</span>
+      </div>
+      <div class="bench-row"><span class="bench-name">SWE-Bench Pro (MIT)</span><span class="bench-val">#1</span></div>
+      <div class="bench-bar"><div class="bench-fill" style="width:85%"></div></div>
+      <div class="bench-row"><span class="bench-name">License</span><span class="bench-val">MIT ✅</span></div>
+      <p style="font-size:0.8rem;color:#888;margin-top:10px;">MIT协议开源模型中SWE-Bench Pro最高分；代码 + Agent能力兼备</p>
+    </div>
+
+  </div>
+
+  <div class="section-title">📊 综合排行榜</div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>排名</th>
+          <th>模型</th>
+          <th>厂商</th>
+          <th>类型</th>
+          <th>SWE-Bench</th>
+          <th>GPQA</th>
+          <th>代码能力</th>
+          <th>特色</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="rank-1">
+          <td>🥇 #1</td>
+          <td><strong>Claude Opus 4.7</strong></td>
+          <td>Anthropic</td>
+          <td><span class="tag tag-closed">闭源</span></td>
+          <td>87.6%</td>
+          <td>91.2%</td>
+          <td>⭐⭐⭐⭐⭐</td>
+          <td>1M上下文，Agent首选</td>
+        </tr>
+        <tr class="rank-2">
+          <td>🥈 #2</td>
+          <td><strong>GPT-5.5</strong></td>
+          <td>OpenAI</td>
+          <td><span class="tag tag-closed">闭源</span></td>
+          <td>85.1%</td>
+          <td>89.0%</td>
+          <td>⭐⭐⭐⭐⭐</td>
+          <td>3层推理，实际工作强</td>
+        </tr>
+        <tr class="rank-3">
+          <td>🥉 #3</td>
+          <td><strong>Gemini 3.1 Pro</strong></td>
+          <td>Google</td>
+          <td><span class="tag tag-closed">闭源</span></td>
+          <td>82.3%</td>
+          <td>88.7%</td>
+          <td>⭐⭐⭐⭐</td>
+          <td>2M上下文，多模态</td>
+        </tr>
+        <tr>
+          <td>#4</td>
+          <td><strong>Kimi K2.6</strong></td>
+          <td>Moonshot AI</td>
+          <td><span class="tag tag-open">开源#1</span></td>
+          <td>79.2%</td>
+          <td>85.4%</td>
+          <td>⭐⭐⭐⭐</td>
+          <td>300子Agent，开源之王</td>
+        </tr>
+        <tr>
+          <td>#5</td>
+          <td><strong>DeepSeek V4-Pro</strong></td>
+          <td>DeepSeek</td>
+          <td><span class="tag tag-open">开源MIT</span></td>
+          <td>76.8%</td>
+          <td>83.1%</td>
+          <td>⭐⭐⭐⭐⭐</td>
+          <td>LiveCode 93.5%，代码怪物</td>
+        </tr>
+        <tr>
+          <td>#6</td>
+          <td><strong>Qwen 3.5-397B</strong></td>
+          <td>Alibaba</td>
+          <td><span class="tag tag-open">开源</span></td>
+          <td>74.5%</td>
+          <td>88.4%</td>
+          <td>⭐⭐⭐⭐</td>
+          <td>Tool-calling榜#1</td>
+        </tr>
+        <tr>
+          <td>#7</td>
+          <td><strong>GLM 5.1</strong></td>
+          <td>Zhipu AI</td>
+          <td><span class="tag tag-open">开源MIT</span></td>
+          <td>MIT#1</td>
+          <td>81.0%</td>
+          <td>⭐⭐⭐⭐</td>
+          <td>MIT协议最佳</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="updated">⚡ 数据来源：Artificial Analysis Intelligence Index · codersera.com · lushbinary.com · kingy.ai | 由 小蓝虾🦐 每日更新 · 最后更新：2026-05-24</p>
+</div>
+
+<script>
+function filterCards(tag) {
+  const cards = document.querySelectorAll('.card');
+  const btns = document.querySelectorAll('.filter-btn');
+  btns.forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  cards.forEach(card => {
+    if (tag === 'all' || card.dataset.tags.includes(tag)) {
+      card.style.display = '';
+    } else {
+      card.style.display = 'none';
+    }
+  });
+}
+// Duplicate ticker for seamless loop
+const ticker = document.getElementById('ticker');
+ticker.innerHTML += ticker.innerHTML;
+</script>
+</body>
+</html>
