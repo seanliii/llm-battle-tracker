@@ -265,7 +265,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr class="rank-1">
+        <tr class="rank-1" data-tags="closed agent">
           <td>🥇 #1</td>
           <td><strong>Claude Opus 4.7</strong></td>
           <td>Anthropic</td>
@@ -275,7 +275,7 @@
           <td>⭐⭐⭐⭐⭐</td>
           <td>1M上下文，Agent首选</td>
         </tr>
-        <tr class="rank-2">
+        <tr class="rank-2" data-tags="closed agent">
           <td>🥈 #2</td>
           <td><strong>GPT-5.5</strong></td>
           <td>OpenAI</td>
@@ -285,7 +285,7 @@
           <td>⭐⭐⭐⭐⭐</td>
           <td>3层推理，实际工作强</td>
         </tr>
-        <tr class="rank-3">
+        <tr class="rank-3" data-tags="closed">
           <td>🥉 #3</td>
           <td><strong>Gemini 3.1 Pro</strong></td>
           <td>Google</td>
@@ -295,7 +295,7 @@
           <td>⭐⭐⭐⭐</td>
           <td>2M上下文，多模态</td>
         </tr>
-        <tr>
+        <tr data-tags="open agent china">
           <td>#4</td>
           <td><strong>Kimi K2.6</strong></td>
           <td>Moonshot AI</td>
@@ -305,7 +305,7 @@
           <td>⭐⭐⭐⭐</td>
           <td>300子Agent，开源之王</td>
         </tr>
-        <tr>
+        <tr data-tags="open china">
           <td>#5</td>
           <td><strong>DeepSeek V4-Pro</strong></td>
           <td>DeepSeek</td>
@@ -315,7 +315,7 @@
           <td>⭐⭐⭐⭐⭐</td>
           <td>LiveCode 93.5%，代码怪物</td>
         </tr>
-        <tr>
+        <tr data-tags="open china">
           <td>#6</td>
           <td><strong>Qwen 3.5-397B</strong></td>
           <td>Alibaba</td>
@@ -325,7 +325,7 @@
           <td>⭐⭐⭐⭐</td>
           <td>Tool-calling榜#1</td>
         </tr>
-        <tr>
+        <tr data-tags="open china">
           <td>#7</td>
           <td><strong>GLM 5.1</strong></td>
           <td>Zhipu AI</td>
@@ -345,15 +345,17 @@
 <script>
 function filterCards(tag) {
   const cards = document.querySelectorAll('.card');
+  const rows = document.querySelectorAll('tbody tr[data-tags]');
   const btns = document.querySelectorAll('.filter-btn');
   btns.forEach(b => b.classList.remove('active'));
   event.target.classList.add('active');
   cards.forEach(card => {
-    if (tag === 'all' || card.dataset.tags.includes(tag)) {
-      card.style.display = '';
-    } else {
-      card.style.display = 'none';
-    }
+    const tags = card.dataset.tags || '';
+    card.style.display = (tag === 'all' || tags.split(' ').includes(tag)) ? '' : 'none';
+  });
+  rows.forEach(row => {
+    const tags = row.dataset.tags || '';
+    row.style.display = (tag === 'all' || tags.split(' ').includes(tag)) ? '' : 'none';
   });
 }
 // Duplicate ticker for seamless loop
